@@ -35,8 +35,6 @@ CURRENCY_PRECISION = {
 }
 
 
-
-
 def satoshi_to_satoshi():
     return SATOSHI
 
@@ -73,6 +71,20 @@ def currency_to_satoshi(amount, currency):
     """
     satoshis = EXCHANGE_RATES[currency]()
     return int(satoshis * Decimal(amount))
+
+
+def currency_to_ltc(amount, currency):
+    """Converts a given amount of currency to the equivalent number of
+    satoshi. The amount can be either an int, float, or string as long as
+    it is a valid input to :py:class:`decimal.Decimal`.
+
+    :param amount: The quantity of currency.
+    :param currency: One of the :ref:`supported currencies`.
+    :type currency: ``str``
+    :rtype: ``int``
+    """
+    val = EXCHANGE_RATES['ltc']()
+    return float(Decimal(amount)/val)
 
 
 class CachedRate:
@@ -155,9 +167,9 @@ def satoshi_to_currency_cached(num, currency):
     :type currency: ``str``
     :rtype: ``str``
     """
-    print(  Decimal('0.' + '0' * CURRENCY_PRECISION[currency]))
+    print(Decimal('0.' + '0' * CURRENCY_PRECISION[currency]))
     return '{:f}'.format(
-            Decimal(num / Decimal(EXCHANGE_RATES[currency]()))
-            .quantize(Decimal('0.' + '0' * CURRENCY_PRECISION[currency]), rounding=ROUND_DOWN)
+        Decimal(num / Decimal(EXCHANGE_RATES[currency]()))
+        .quantize(Decimal('0.' + '0' * CURRENCY_PRECISION[currency]), rounding=ROUND_DOWN)
         .normalize()
     )

@@ -1,8 +1,9 @@
 import requests
 
-from lit.network import currency_to_satoshi
+from lit.network import currency_to_satoshi,currency_to_ltc
 from lit.network.meta import Unspent
 from lit.utils import Decimal
+import time
 
 DEFAULT_TIMEOUT = 1000
 
@@ -62,7 +63,7 @@ class TatumAPI:
     MAIN_ENDPOINT = 'https://api-eu1.tatum.io/v3/litecoin/'
     MAIN_ADDRESS_API = MAIN_ENDPOINT + 'address/balance'
     MAIN_TRANSACTIONS = MAIN_ENDPOINT + 'transaction/address'
-    MAIN_TRANSACTIONS_UNSPENT = MAIN_ENDPOINT + 'get_tx_unspent'
+    MAIN_TRANSACTIONS_UNSPENT = MAIN_ENDPOINT + 'utxo'
     MAIN_TRANSACTION_SEND = MAIN_ENDPOINT + 'send_tx/'
 
     @classmethod
@@ -83,13 +84,13 @@ class TatumAPI:
         return cls._get_balance('LTC', address, token)
 
     @classmethod
-    def _get_transactions(cls, network, address,token):
+    def _get_transactions(cls, network, address, token):
         url = "{endpoint}/{address}?pageSize=30&offset=0".format(
-        endpoint=cls.MAIN_TRANSACTIONS,
-        address=address
+            endpoint=cls.MAIN_TRANSACTIONS,
+            address=address
         )
         r = requests.get(url, timeout=DEFAULT_TIMEOUT,
-                        headers={'x-api-key': token})
+                         headers={'x-api-key': token})
         if r.status_code != 200:
             raise ConnectionError
         data = r.json()
@@ -100,26 +101,49 @@ class TatumAPI:
         return cls._get_transactions('LTC', address, token)
 
     @classmethod
-    def _get_unspent(cls, network, address):
-        url = "{endpoint}/{address}".format(
-            endpoint=cls.MAIN_TRANSACTIONS_UNSPENT,
-            address=address
-        )
-        r = requests.get(url, timeout=DEFAULT_TIMEOUT)
-        if r.status_code != 200:
-            raise ConnectionError
-        return [
-            Unspent(currency_to_satoshi(tx['value'], 'ltc'),
-                    tx['confirmations'],
-                    tx['script_hex'],
-                    tx['txid'],
-                    tx['output_no'])
-            for tx in r.json()['data']["txs"]
-        ]
+    def _get_unspent(cls, network, address, token):
+        loop = True
+        data = []
+        offset = 0
+        while loop:
+            url = "{endpoint}/{address}?pageSize=50&offset={offset}".format(
+                endpoint=cls.MAIN_TRANSACTIONS,
+                address=address,
+                offset=offset
+            )
+            r = requests.get(url, timeout=DEFAULT_TIMEOUT,
+                                headers={'x-api-key': token})
+            if r.status_code == 200:
+                if len(r.json()) == 0:
+                    loop = False
+                else:
+                     for i in r.json():
+                         data.append(i)   
+            else:
+                raise ConnectionError 
+            offset = 50
+        final = []
+        indexes = [0,1]
+        for i in data:
+            for j in indexes:
+                url = "{endpoint}/{hash}/{index}".format(
+                    endpoint=cls.MAIN_TRANSACTIONS_UNSPENT,
+                    hash=i['hash'],
+                    index=j
+                )
+                r = requests.get(url, timeout=DEFAULT_TIMEOUT,
+                                    headers={'x-api-key': token})
+                if r.status_code == 200 and r.json()['address']==address:
+                    final.append(Unspent(currency_to_satoshi(r.json()['value'], 'satoshi'),
+                    10,
+                    r.json()['script'],
+                    r.json()['hash'],
+                    r.json()['index']))
+        return final
 
     @classmethod
-    def get_unspent(cls, address):
-        return cls._get_unspent('LTC', address)
+    def get_unspent(cls, address, token):
+        return cls._get_unspent('LTC', address, token)
 
     @classmethod
     def _broadcast_tx(cls, network, tx_hex):
@@ -184,7 +208,7 @@ class NetworkAPI:
         raise ConnectionError('All APIs are unreachable.')
 
     @classmethod
-    def get_unspent(cls, address):
+    def get_unspent(cls, address, token):
         """Gets all unspent transaction outputs belonging to an address.
 
         :param address: The address in question.
@@ -195,7 +219,7 @@ class NetworkAPI:
 
         for api_call in cls.GET_UNSPENT_MAIN:
             try:
-                return api_call(address)
+                return api_call(address, token)
             except cls.IGNORED_ERRORS:
                 pass
 

@@ -175,13 +175,12 @@ class PrivateKey(BaseKey):
         self.balance = NetworkAPI.get_balance(self.address, token)
         return self.balance_as(currency)
 
-    def get_unspents(self):
+    def get_unspents(self, token=None):
         """Fetches all available unspent transaction outputs.
 
         :rtype: ``list`` of :class:`~lit.network.meta.Unspent`
         """
-        self.unspents[:] = NetworkAPI.get_unspent(self.address)
-        self.balance = sum(unspent.amount for unspent in self.unspents)
+        self.unspents[:] = NetworkAPI.get_unspent(self.address, token)
         return self.unspents
 
     def get_transactions(self, token=None):
@@ -235,7 +234,9 @@ class PrivateKey(BaseKey):
             message=message,
             compressed=self.is_compressed()
         )
-
+        print('*'*100)
+        print(unspents, outputs )
+        print('*'*100)
         return create_p2pkh_transaction(self, unspents, outputs)
 
     def send(self, outputs, fee=None, leftover=None, combine=True,
@@ -284,7 +285,7 @@ class PrivateKey(BaseKey):
 
     @classmethod
     def prepare_transaction(cls, address, outputs, compressed=True, fee=None, leftover=None,
-                            combine=True, message=None, unspents=None):  # pragma: no cover
+                            combine=True, message=None, unspents=None, token=None):  # pragma: no cover
         """Prepares a P2PKH transaction for offline signing.
 
         :param address: The address the funds will be sent from.
@@ -322,7 +323,7 @@ class PrivateKey(BaseKey):
         :rtype: ``str``
         """
         unspents, outputs = sanitize_tx_data(
-            unspents or NetworkAPI.get_unspent(address),
+            unspents or NetworkAPI.get_unspent(address, token=token),
             outputs,
             fee or get_fee_cached(),
             leftover or address,
