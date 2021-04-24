@@ -234,9 +234,8 @@ class PrivateKey(BaseKey):
             message=message,
             compressed=self.is_compressed()
         )
-        print('*'*100)
-        print(unspents, outputs )
-        print('*'*100)
+        
+
         return create_p2pkh_transaction(self, unspents, outputs)
 
     def send(self, outputs, fee=None, leftover=None, combine=True,
