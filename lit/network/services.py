@@ -112,7 +112,6 @@ class TatumAPI:
             )
             r = requests.get(url, timeout=DEFAULT_TIMEOUT,
                              headers={'x-api-key': token})
-            print(r.status_code)
             if r.status_code == 200:
                 if len(r.json()) == 0:
                     loop = False
@@ -133,7 +132,6 @@ class TatumAPI:
                 )
                 r = requests.get(url, timeout=DEFAULT_TIMEOUT,
                                  headers={'x-api-key': token})
-                print(r.status_code)
                 if r.status_code == 200 and r.json()['address'] == address:
                     final.append(Unspent(currency_to_satoshi(r.json()['value'], 'satoshi'),
                                          10,

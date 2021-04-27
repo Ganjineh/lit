@@ -167,8 +167,4 @@ def satoshi_to_currency_cached(num, currency):
     :type currency: ``str``
     :rtype: ``str``
     """
-    return '{:f}'.format(
-        Decimal(num / Decimal(EXCHANGE_RATES[currency]()))
-        .quantize(Decimal('0.' + '0' * CURRENCY_PRECISION[currency]), rounding=ROUND_DOWN)
-        .normalize()
-    )
+    return num

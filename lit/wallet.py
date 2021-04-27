@@ -162,7 +162,7 @@ class PrivateKey(BaseKey):
         """
         return satoshi_to_currency_cached(self.balance, currency)
 
-    def get_balance(self, currency='satoshi', token=None):
+    def get_balance(self, currency='ltc', token=None):
         """Fetches the current balance by calling
         :func:`~lit.PrivateKey.get_unspents` and returns it using
         :func:`~lit.PrivateKey.balance_as`.
