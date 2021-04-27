@@ -3,7 +3,7 @@ from coincurve import verify_signature as _vs
 from lit.base58 import b58decode_check, b58encode_check
 from lit.crypto import ripemd160_sha256
 from lit.curve import x_to_y
-
+from lit.base32 import bech32_decode, BECH32_MAIN_VERSION_SET
 MAIN_PUBKEY_HASH = b'\x30'
 MAIN_SCRIPT_HASH = b'\x05'
 MAIN_PRIVATE_KEY = b'\xb0'
@@ -41,11 +41,12 @@ def address_to_public_key_hash(address):
 
 
 def get_version(address):
-    version = b58decode_check(address)[:1]
-
-    if version == MAIN_PUBKEY_HASH:
+    version, _ = bech32_decode(address)
+    if version is None:
+        version = b58decode_check(address)[:1]
+    if version in (MAIN_PUBKEY_HASH, MAIN_SCRIPT_HASH) or version in BECH32_MAIN_VERSION_SET:
         return 'main'
-    elif version == TEST_PUBKEY_HASH:
+    elif version in (TEST_PUBKEY_HASH, TEST_SCRIPT_HASH):
         return 'test'
     else:
         raise ValueError('{} does not correspond to a mainnet nor '
@@ -91,6 +92,9 @@ def wif_to_bytes(wif):
 
     return private_key, compressed, version
 
+def segwit_scriptpubkey(witver, witprog):
+    """Construct a Segwit scriptPubKey for a given witness program."""
+    return bytes([witver + 0x50 if witver else 0, len(witprog)] + witprog)
 
 def wif_checksum_check(wif):
 
@@ -115,7 +119,8 @@ def public_key_to_address(public_key, version='main'):
     length = len(public_key)
 
     if length not in (33, 65):
-        raise ValueError('{} is an invalid length for a public key.'.format(length))
+        raise ValueError(
+            '{} is an invalid length for a public key.'.format(length))
 
     return b58encode_check(version + ripemd160_sha256(public_key))
 
@@ -125,12 +130,15 @@ def public_key_to_coords(public_key):
     length = len(public_key)
 
     if length == 33:
-        flag, x = int.from_bytes(public_key[:1], 'big'), int.from_bytes(public_key[1:], 'big')
+        flag, x = int.from_bytes(public_key[:1], 'big'), int.from_bytes(
+            public_key[1:], 'big')
         y = x_to_y(x, flag & 1)
     elif length == 65:
-        x, y = int.from_bytes(public_key[1:33], 'big'), int.from_bytes(public_key[33:], 'big')
+        x, y = int.from_bytes(public_key[1:33], 'big'), int.from_bytes(
+            public_key[33:], 'big')
     else:
-        raise ValueError('{} is an invalid length for a public key.'.format(length))
+        raise ValueError(
+            '{} is an invalid length for a public key.'.format(length))
 
     return x, y
 

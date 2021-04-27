@@ -1,6 +1,6 @@
 import requests
 
-from lit.network import currency_to_satoshi,currency_to_ltc
+from lit.network import currency_to_satoshi, currency_to_ltc
 from lit.network.meta import Unspent
 from lit.utils import Decimal
 import time
@@ -64,7 +64,7 @@ class TatumAPI:
     MAIN_ADDRESS_API = MAIN_ENDPOINT + 'address/balance'
     MAIN_TRANSACTIONS = MAIN_ENDPOINT + 'transaction/address'
     MAIN_TRANSACTIONS_UNSPENT = MAIN_ENDPOINT + 'utxo'
-    MAIN_TRANSACTION_SEND = MAIN_ENDPOINT + 'send_tx/'
+    MAIN_TRANSACTION_SEND = MAIN_ENDPOINT + 'broadcast'
 
     @classmethod
     def _get_balance(cls, network, address, token):
@@ -76,7 +76,6 @@ class TatumAPI:
                          headers={'x-api-key': token})
         if r.status_code != 200:
             raise ConnectionError
-        print(Decimal(r.json()['incoming']) - Decimal(r.json()['outgoing']))
         return (Decimal(r.json()['incoming']) - Decimal(r.json()['outgoing']))
 
     @classmethod
@@ -112,18 +111,19 @@ class TatumAPI:
                 offset=offset
             )
             r = requests.get(url, timeout=DEFAULT_TIMEOUT,
-                                headers={'x-api-key': token})
+                             headers={'x-api-key': token})
             if r.status_code == 200:
                 if len(r.json()) == 0:
                     loop = False
                 else:
-                     for i in r.json():
-                         data.append(i)   
+                    for i in r.json():
+                        data.append(i)
             else:
-                raise ConnectionError 
+                raise ConnectionError
             offset = 50
+        print(data)
         final = []
-        indexes = [0,1]
+        indexes = [0, 1]
         for i in data:
             for j in indexes:
                 url = "{endpoint}/{hash}/{index}".format(
@@ -132,13 +132,13 @@ class TatumAPI:
                     index=j
                 )
                 r = requests.get(url, timeout=DEFAULT_TIMEOUT,
-                                    headers={'x-api-key': token})
-                if r.status_code == 200 and r.json()['address']==address:
+                                 headers={'x-api-key': token})
+                if r.status_code == 200 and r.json()['address'] == address:
                     final.append(Unspent(currency_to_satoshi(r.json()['value'], 'satoshi'),
-                    10,
-                    r.json()['script'],
-                    r.json()['hash'],
-                    r.json()['index']))
+                                         10,
+                                         r.json()['script'],
+                                         r.json()['hash'],
+                                         r.json()['index']))
         return final
 
     @classmethod
@@ -146,18 +146,19 @@ class TatumAPI:
         return cls._get_unspent('LTC', address, token)
 
     @classmethod
-    def _broadcast_tx(cls, network, tx_hex):
-        url = "{endpoint}{network}/".format(
-            endpoint=cls.MAIN_TRANSACTION_SEND,
-            network=network
+    def _broadcast_tx(cls, network, tx_hex, token):
+        url = "{endpoint}/".format(
+            endpoint=cls.MAIN_TRANSACTION_SEND
         )
+        print(url)
+        print(tx_hex)
         r = requests.post(url, timeout=DEFAULT_TIMEOUT,
-                          data={'tx_hex': tx_hex})
+                          data={'txData': tx_hex}, headers={'x-api-key': token})
         return True if r.status_code == 200 else False
 
     @classmethod
-    def broadcast_tx(cls, tx_hex):
-        return cls._broadcast_tx('LTC', tx_hex)
+    def broadcast_tx(cls, tx_hex, token):
+        return cls._broadcast_tx('LTC', tx_hex, token)
 
 
 class NetworkAPI:
@@ -226,7 +227,7 @@ class NetworkAPI:
         raise ConnectionError('All APIs are unreachable.')
 
     @classmethod
-    def broadcast_tx(cls, tx_hex):  # pragma: no cover
+    def broadcast_tx(cls, tx_hex, token):  # pragma: no cover
         """Broadcasts a transaction to the blockchain.
 
         :param tx_hex: A signed transaction in hex form.
@@ -237,7 +238,7 @@ class NetworkAPI:
 
         for api_call in cls.BROADCAST_TX_MAIN:
             try:
-                success = api_call(tx_hex)
+                success = api_call(tx_hex, token)
                 if not success:
                     continue
                 return

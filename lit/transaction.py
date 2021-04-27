@@ -3,7 +3,8 @@ from itertools import islice
 
 from lit.crypto import double_sha256, sha256
 from lit.exceptions import InsufficientFunds
-from lit.format import address_to_public_key_hash
+from lit.format import address_to_public_key_hash, get_version, b58decode_check, segwit_scriptpubkey,MAIN_PUBKEY_HASH,MAIN_SCRIPT_HASH
+from lit.base32 import decode as segwit_decode
 from lit.network.rates import currency_to_satoshi_cached
 from lit.utils import (
     bytes_to_hex, chunk_data, hex_to_bytes, int_to_unknown_bytes
@@ -22,7 +23,7 @@ OP_EQUALVERIFY = b'\x88'
 OP_HASH160 = b'\xa9'
 OP_PUSH_20 = b'\x14'
 OP_RETURN = b'\x6a'
-
+OP_EQUAL = b'\x87'
 MESSAGE_LIMIT = 40
 
 
@@ -94,7 +95,8 @@ def sanitize_tx_data(unspents, outputs, fee, leftover, combine=True, message=Non
             messages.append((message, 0))
 
     # Include return address in fee estimate.
-    fee = estimate_tx_fee(len(unspents), len(outputs) + len(messages) + 1, fee, compressed)
+    fee = estimate_tx_fee(len(unspents), len(outputs) +
+                          len(messages) + 1, fee, compressed)
     total_out = sum(out[1] for out in outputs) + fee
 
     total_in = 0
@@ -129,6 +131,21 @@ def sanitize_tx_data(unspents, outputs, fee, leftover, combine=True, message=Non
     return unspents, outputs
 
 
+def address_to_scriptpubkey(address):
+    # Raise ValueError if we cannot identify the address.
+    get_version(address)
+    try:
+        version = b58decode_check(address)[:1]
+    except ValueError:
+        witver, data = segwit_decode(address)
+        return segwit_scriptpubkey(witver, data)
+    print(address_to_public_key_hash(address))
+    if version == MAIN_PUBKEY_HASH:
+        return OP_DUP + OP_HASH160 + OP_PUSH_20 + address_to_public_key_hash(address) + OP_EQUALVERIFY + OP_CHECKSIG
+    elif version == MAIN_SCRIPT_HASH:
+        return OP_HASH160 + OP_PUSH_20 + address_to_public_key_hash(address) + OP_EQUAL
+
+
 def construct_output_block(outputs):
 
     output_block = b''
@@ -138,9 +155,7 @@ def construct_output_block(outputs):
 
         # Real recipient
         if amount:
-            script = (OP_DUP + OP_HASH160 + OP_PUSH_20 +
-                      address_to_public_key_hash(dest) +
-                      OP_EQUALVERIFY + OP_CHECKSIG)
+            script = address_to_scriptpubkey(dest)
 
             output_block += amount.to_bytes(8, byteorder='little')
 
@@ -187,7 +202,9 @@ def create_p2pkh_transaction(private_key, unspents, outputs):
     input_count = int_to_unknown_bytes(len(unspents), byteorder='little')
     output_count = int_to_unknown_bytes(len(outputs), byteorder='little')
     output_block = construct_output_block(outputs)
-
+    print('*'*90)
+    print(output_block)
+    print('*'*90)
     # Optimize for speed, not memory, by pre-computing values.
     inputs = []
     for unspent in unspents:
@@ -228,7 +245,8 @@ def create_p2pkh_transaction(private_key, unspents, outputs):
         )
 
         txin.script = script_sig
-        txin.script_len = int_to_unknown_bytes(len(script_sig), byteorder='little')
+        txin.script_len = int_to_unknown_bytes(
+            len(script_sig), byteorder='little')
 
     return bytes_to_hex(
         version +

@@ -239,7 +239,7 @@ class PrivateKey(BaseKey):
         return create_p2pkh_transaction(self, unspents, outputs)
 
     def send(self, outputs, fee=None, leftover=None, combine=True,
-             message=None, unspents=None):  # pragma: no cover
+             message=None, unspents=None,token=None):  # pragma: no cover
         """Creates a signed P2PKH transaction and attempts to broadcast it on
         the blockchain. This accepts the same arguments as
         :func:`~lit.PrivateKey.create_transaction`.
@@ -278,7 +278,7 @@ class PrivateKey(BaseKey):
             outputs, fee=fee, leftover=leftover, combine=combine, message=message, unspents=unspents
         )
 
-        NetworkAPI.broadcast_tx(tx_hex)
+        NetworkAPI.broadcast_tx(tx_hex,token)
 
         return calc_txid(tx_hex)
 
