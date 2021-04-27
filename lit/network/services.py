@@ -112,6 +112,7 @@ class TatumAPI:
             )
             r = requests.get(url, timeout=DEFAULT_TIMEOUT,
                              headers={'x-api-key': token})
+            print(r.status_code)
             if r.status_code == 200:
                 if len(r.json()) == 0:
                     loop = False
@@ -121,7 +122,6 @@ class TatumAPI:
             else:
                 raise ConnectionError
             offset = 50
-        print(data)
         final = []
         indexes = [0, 1]
         for i in data:
@@ -133,6 +133,7 @@ class TatumAPI:
                 )
                 r = requests.get(url, timeout=DEFAULT_TIMEOUT,
                                  headers={'x-api-key': token})
+                print(r.status_code)
                 if r.status_code == 200 and r.json()['address'] == address:
                     final.append(Unspent(currency_to_satoshi(r.json()['value'], 'satoshi'),
                                          10,
@@ -150,7 +151,6 @@ class TatumAPI:
         url = "{endpoint}/".format(
             endpoint=cls.MAIN_TRANSACTION_SEND
         )
-        print(url)
         print(tx_hex)
         r = requests.post(url, timeout=DEFAULT_TIMEOUT,
                           data={'txData': tx_hex}, headers={'x-api-key': token})

@@ -139,7 +139,6 @@ def address_to_scriptpubkey(address):
     except ValueError:
         witver, data = segwit_decode(address)
         return segwit_scriptpubkey(witver, data)
-    print(address_to_public_key_hash(address))
     if version == MAIN_PUBKEY_HASH:
         return OP_DUP + OP_HASH160 + OP_PUSH_20 + address_to_public_key_hash(address) + OP_EQUALVERIFY + OP_CHECKSIG
     elif version == MAIN_SCRIPT_HASH:
@@ -202,9 +201,6 @@ def create_p2pkh_transaction(private_key, unspents, outputs):
     input_count = int_to_unknown_bytes(len(unspents), byteorder='little')
     output_count = int_to_unknown_bytes(len(outputs), byteorder='little')
     output_block = construct_output_block(outputs)
-    print('*'*90)
-    print(output_block)
-    print('*'*90)
     # Optimize for speed, not memory, by pre-computing values.
     inputs = []
     for unspent in unspents:
