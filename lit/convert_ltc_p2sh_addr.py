@@ -1,5 +1,5 @@
 from lit.hash_util import ripemd160,hash160,hash256,dhash256
-from base58 import b58encode,b58encode_check,b58decode,b58decode_check
+from lit.base58 import b58encode,b58encode_check,b58decode,b58decode_check
 import binascii
 
 def convert(address):
