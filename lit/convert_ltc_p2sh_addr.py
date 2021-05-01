@@ -17,15 +17,12 @@ def convert(address):
            version = 'c4'
        else:
            raise Exception('unknow version {}'.format(version))
-       #print (version)
 
        '''
        05  <-> 50
        196 <-> 58
        '''
-       #print (version+data.hex())
        newAddress = b58encode_check( bytes.fromhex(version+data.hex()) )
-       #print (newAddress)
     except:
         return address
     return str(newAddress, 'utf-8')

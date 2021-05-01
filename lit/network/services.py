@@ -149,7 +149,6 @@ class TatumAPI:
         url = "{endpoint}/".format(
             endpoint=cls.MAIN_TRANSACTION_SEND
         )
-        print(tx_hex)
         r = requests.post(url, timeout=DEFAULT_TIMEOUT,
                           data={'txData': tx_hex}, headers={'x-api-key': token})
         return True if r.status_code == 200 else False
