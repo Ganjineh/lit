@@ -25,4 +25,7 @@ def convert(address):
        newAddress = b58encode_check( bytes.fromhex(version+data.hex()) )
     except:
         return address
-    return str(newAddress, 'utf-8')
+    try:
+        return str(newAddress, 'utf-8')
+    except:
+        return str(newAddress)
