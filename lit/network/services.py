@@ -63,8 +63,10 @@ class TatumAPI:
     MAIN_ENDPOINT = 'https://api-eu1.tatum.io/v3/litecoin/'
     MAIN_ADDRESS_API = MAIN_ENDPOINT + 'address/balance'
     MAIN_TRANSACTIONS = MAIN_ENDPOINT + 'transaction/address'
+    MAIN_TRANSACTION = MAIN_ENDPOINT + 'transaction'
     MAIN_TRANSACTIONS_UNSPENT = MAIN_ENDPOINT + 'utxo'
     MAIN_TRANSACTION_SEND = MAIN_ENDPOINT + 'broadcast'
+    
 
     @classmethod
     def _get_balance(cls, network, address, token):
@@ -157,9 +159,27 @@ class TatumAPI:
     def broadcast_tx(cls, tx_hex, token):
         return cls._broadcast_tx('LTC', tx_hex, token)
 
+    @classmethod
+    def _check_in_mempool(cls, tx_id, token):
+        url = "{endpoint}/{txid}".format(
+            endpoint=cls.MAIN_TRANSACTION,
+            txid=tx_id
+        )
+        r = requests.get(url, timeout=DEFAULT_TIMEOUT,
+                         headers={'x-api-key': token})
+        if r.status_code != 200:
+            raise ConnectionError
+        return 'confirmations' in r.json()
+
+    @classmethod
+    def check_in_mempool(cls, tx_id, token):
+        return cls._check_in_mempool(tx_id, token)
+
+
 class SoChainAPI:
     MAIN_ENDPOINT = 'https://chain.so/api/v2/'
     MAIN_TRANSACTIONS_UNSPENT = MAIN_ENDPOINT + 'get_tx_unspent/LTC/'
+
     @classmethod
     def _get_unspent(cls, network, address):
         url = "{endpoint}/{address}".format(
@@ -181,6 +201,8 @@ class SoChainAPI:
     @classmethod
     def get_unspent(cls, address, token):
         return cls._get_unspent('LTC', address)
+
+
 class NetworkAPI:
     IGNORED_ERRORS = (ConnectionError,
                       requests.exceptions.ConnectionError,
@@ -191,6 +213,7 @@ class NetworkAPI:
     GET_TRANSACTIONS_MAIN = [TatumAPI.get_transactions, ]
     GET_UNSPENT_MAIN = [SoChainAPI.get_unspent, ]
     BROADCAST_TX_MAIN = [TatumAPI.broadcast_tx, ]
+    CHECK_IN_MEMPOOL_MAIN = [TatumAPI.check_in_mempool, ]
 
     @classmethod
     def get_balance(cls, address, token):
@@ -223,6 +246,24 @@ class NetworkAPI:
         for api_call in cls.GET_TRANSACTIONS_MAIN:
             try:
                 return api_call(address, token)
+            except cls.IGNORED_ERRORS:
+                pass
+
+        raise ConnectionError('All APIs are unreachable.')
+
+    @classmethod
+    def check_in_mempool(cls, tx_id, token):
+        """Gets the ID of all transactions related to an address.
+
+        :param address: The address in question.
+        :type address: ``str``
+        :raises ConnectionError: If all API services fail.
+        :rtype: ``list`` of ``str``
+        """
+
+        for api_call in cls.CHECK_IN_MEMPOOL_MAIN:
+            try:
+                return api_call(tx_id, token)
             except cls.IGNORED_ERRORS:
                 pass
 
