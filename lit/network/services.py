@@ -157,7 +157,30 @@ class TatumAPI:
     def broadcast_tx(cls, tx_hex, token):
         return cls._broadcast_tx('LTC', tx_hex, token)
 
+class SoChainAPI:
+    MAIN_ENDPOINT = 'https://chain.so/api/v2/'
+    MAIN_TRANSACTIONS_UNSPENT = MAIN_ENDPOINT + 'get_tx_unspent/LTC/'
+    @classmethod
+    def _get_unspent(cls, network, address):
+        url = "{endpoint}/{address}".format(
+            endpoint=cls.MAIN_TRANSACTIONS_UNSPENT,
+            address=address
+        )
+        r = requests.get(url, timeout=DEFAULT_TIMEOUT)
+        if r.status_code != 200:
+            raise ConnectionError
+        return [
+            Unspent(currency_to_satoshi(tx['value'], 'ltc'),
+                    tx['confirmations'],
+                    tx['script_hex'],
+                    tx['txid'],
+                    tx['output_no'])
+            for tx in r.json()['data']["txs"]
+        ]
 
+    @classmethod
+    def get_unspent(cls, address, token):
+        return cls._get_unspent('LTC', address)
 class NetworkAPI:
     IGNORED_ERRORS = (ConnectionError,
                       requests.exceptions.ConnectionError,
@@ -166,7 +189,7 @@ class NetworkAPI:
 
     GET_BALANCE_MAIN = [TatumAPI.get_balance, ]
     GET_TRANSACTIONS_MAIN = [TatumAPI.get_transactions, ]
-    GET_UNSPENT_MAIN = [TatumAPI.get_unspent, ]
+    GET_UNSPENT_MAIN = [SoChainAPI.get_unspent, ]
     BROADCAST_TX_MAIN = [TatumAPI.broadcast_tx, ]
 
     @classmethod
