@@ -66,7 +66,6 @@ class TatumAPI:
     MAIN_TRANSACTION = MAIN_ENDPOINT + 'transaction'
     MAIN_TRANSACTIONS_UNSPENT = MAIN_ENDPOINT + 'utxo'
     MAIN_TRANSACTION_SEND = MAIN_ENDPOINT + 'broadcast'
-    
 
     @classmethod
     def _get_balance(cls, network, address, token):
@@ -100,6 +99,23 @@ class TatumAPI:
     @classmethod
     def get_transactions(cls, address, token):
         return cls._get_transactions('LTC', address, token)
+
+    @classmethod
+    def _get_transaction(cls, hash, token):
+        url = "{endpoint}/{hash}".format(
+            endpoint=cls.MAIN_TRANSACTION,
+            hash=hash
+        )
+        r = requests.get(url, timeout=DEFAULT_TIMEOUT,
+                         headers={'x-api-key': token})
+        if r.status_code != 200:
+            raise ConnectionError
+        data = r.json()
+        return data
+
+    @classmethod
+    def get_transaction(cls, hash, token):
+        return cls._get_transaction(hash, token)
 
     @classmethod
     def _get_unspent(cls, network, address, token):
@@ -212,6 +228,7 @@ class NetworkAPI:
     GET_BALANCE_MAIN = [TatumAPI.get_balance, ]
     GET_TRANSACTIONS_MAIN = [TatumAPI.get_transactions, ]
     GET_UNSPENT_MAIN = [SoChainAPI.get_unspent, ]
+    GET_TRANSACTION_MAIN = [TatumAPI.get_transaction, ]
     BROADCAST_TX_MAIN = [TatumAPI.broadcast_tx, ]
     CHECK_IN_MEMPOOL_MAIN = [TatumAPI.check_in_mempool, ]
 
@@ -246,6 +263,17 @@ class NetworkAPI:
         for api_call in cls.GET_TRANSACTIONS_MAIN:
             try:
                 return api_call(address, token)
+            except cls.IGNORED_ERRORS:
+                pass
+
+        raise ConnectionError('All APIs are unreachable.')
+
+    @classmethod
+    def get_transaction(cls, hash_, token):
+
+        for api_call in cls.GET_TRANSACTION_MAIN:
+            try:
+                return api_call(hash_, token)
             except cls.IGNORED_ERRORS:
                 pass
 

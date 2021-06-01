@@ -14,5 +14,11 @@ def get_transactions(address, token):
     transactions[:] = NetworkAPI.get_transactions(address, token)
     return transactions
 
+
 def check_in_mempool(tx_id, token):
     return NetworkAPI.check_in_mempool(tx_id, token)
+
+
+def get_transaction(hash_, token):
+    transaction = NetworkAPI.get_transaction(hash_, token)
+    return transaction
