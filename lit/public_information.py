@@ -22,3 +22,7 @@ def check_in_mempool(tx_id, token):
 def get_transaction(hash_, token):
     transaction = NetworkAPI.get_transaction(hash_, token)
     return transaction
+
+def get_last_block(token):
+    block_number = NetworkAPI.get_last_block(token)
+    return block_number
