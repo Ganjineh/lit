@@ -237,6 +237,33 @@ class SoChainAPI:
         return cls._get_unspent('LTC', address)
 
 
+class BitcoreAPI:
+    MAIN_ENDPOINT = 'https://api.bitcore.io/api/LTC/mainnet/address/'
+
+    @classmethod
+    def _get_unspent(cls, address):
+        url = "{endpoint}/{address}".format(
+            endpoint=cls.MAIN_TRANSACTIONS_UNSPENT,
+            address=address
+        )
+        url = cls.MAIN_TRANSACTIONS_UNSPENT + address+ '?unspent=true'
+        r = requests.get(url, timeout=DEFAULT_TIMEOUT)
+        if r.status_code != 200:
+            raise ConnectionError
+        return [
+            Unspent(currency_to_satoshi(tx['value'], 'ltc'),
+                    tx['confirmations'],
+                    tx['script'],
+                    tx['mintTxid'],
+                    tx['mintIndex'])
+            for tx in r.json()
+        ]
+
+    @classmethod
+    def get_unspent(cls, address, token):
+        return cls._get_unspent(address)
+
+
 class NetworkAPI:
     IGNORED_ERRORS = (ConnectionError,
                       requests.exceptions.ConnectionError,
@@ -245,7 +272,7 @@ class NetworkAPI:
 
     GET_BALANCE_MAIN = [TatumAPI.get_balance, ]
     GET_TRANSACTIONS_MAIN = [TatumAPI.get_transactions, ]
-    GET_UNSPENT_MAIN = [SoChainAPI.get_unspent, ]
+    GET_UNSPENT_MAIN = [SoChainAPI.get_unspent, BitcoreAPI.get_unspent]
     GET_TRANSACTION_MAIN = [TatumAPI.get_transaction, ]
     BROADCAST_TX_MAIN = [TatumAPI.broadcast_tx, ]
     CHECK_IN_MEMPOOL_MAIN = [TatumAPI.check_in_mempool, ]
