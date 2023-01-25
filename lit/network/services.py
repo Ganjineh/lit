@@ -247,7 +247,7 @@ class BitcoreAPI:
         if r.status_code != 200:
             raise ConnectionError
         return [
-            Unspent(currency_to_satoshi(tx['value'], 'ltc'),
+            Unspent(int(tx['value']),
                     tx['confirmations'],
                     tx['script'],
                     tx['mintTxid'],
