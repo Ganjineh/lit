@@ -242,11 +242,7 @@ class BitcoreAPI:
 
     @classmethod
     def _get_unspent(cls, address):
-        url = "{endpoint}/{address}".format(
-            endpoint=cls.MAIN_TRANSACTIONS_UNSPENT,
-            address=address
-        )
-        url = cls.MAIN_TRANSACTIONS_UNSPENT + address+ '?unspent=true'
+        url = cls.MAIN_ENDPOINT + address+ '?unspent=true'
         r = requests.get(url, timeout=DEFAULT_TIMEOUT)
         if r.status_code != 200:
             raise ConnectionError
